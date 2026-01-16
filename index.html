@@ -1,18 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Vision Pro</title>
+    <title>Peripheral Trainer Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#0f0f0f">
-
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon.png">
-    <link rel="icon" type="image/png" href="icon.png">
 
     <style>
         :root {
@@ -29,56 +24,74 @@
         body, html { 
             margin: 0; padding: 0; overflow: hidden; background: var(--bg-color); 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; height: 100%; width: 100%; 
-            color: var(--text); touch-action: none; /* Fixed for app mode */
-            -webkit-tap-highlight-color: rgba(0,0,0,0);
+            color: var(--text); touch-action: auto; -webkit-tap-highlight-color: rgba(0,0,0,0);
         }
         
         canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
-        
-        /* Interaction Layer Fix: Ensuring it is always on top but lets events through when needed */
-        #interaction-layer { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            z-index: 5; cursor: pointer; pointer-events: auto;
-        }
+        #interaction-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; cursor: pointer; }
 
         #controls {
             position: absolute; top: 0; left: 0; bottom: 0; width: 320px;
             background: var(--panel-bg); padding: 20px; border-right: 1px solid var(--border);
             z-index: 100; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex; flex-direction: column; gap: 20px; overflow-y: auto;
-            pointer-events: auto;
         }
         @media (max-width: 600px) { #controls { width: 85%; padding: 15px; } }
         #controls.visible { transform: translateX(0); }
         
         #toggleControls {
-            position: absolute; top: 40px; left: 20px; /* Adjusted for notch/status bar */
+            position: absolute; top: 20px; left: 20px;
             background: var(--panel-bg); color: white; border: 1px solid var(--border); 
-            padding: 12px 20px; cursor: pointer; border-radius: 6px; 
+            padding: 10px 18px; cursor: pointer; border-radius: 6px; 
             font-size: 12px; z-index: 200; font-weight: bold; letter-spacing: 1px;
-            pointer-events: auto;
         }
+        #toggleControls.hidden { display: none; }
+        #controls.visible ~ #toggleControls { display: block !important; }
 
-        /* All other styles remain the same... */
         .section { display: flex; flex-direction: column; gap: 10px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
         .section-header { font-size: 10px; color: var(--accent); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 5px; }
         .control-group { display: flex; flex-direction: column; gap: 6px; }
+        
         label { font-size: 11px; color: var(--text-dim); display: flex; justify-content: space-between; align-items: center; }
         .val-display { color: var(--accent); font-weight: bold; font-family: monospace; font-size: 12px; }
-        input[type="range"] { width: 100%; cursor: pointer; accent-color: var(--accent); height: 28px; background: transparent; background-image: repeating-linear-gradient(to right, #444, #444 1px, transparent 1px, transparent 10%); background-size: 98% 8px; background-repeat: no-repeat; background-position: center bottom; margin-bottom: 8px; -webkit-appearance: none; }
+        
+        input[type="range"] { 
+            width: 100%; cursor: pointer; accent-color: var(--accent); height: 28px;
+            background: transparent;
+            background-image: repeating-linear-gradient(to right, #444, #444 1px, transparent 1px, transparent 10%);
+            background-size: 98% 8px;
+            background-repeat: no-repeat;
+            background-position: center bottom;
+            margin-bottom: 8px;
+            -webkit-appearance: none;
+        }
         input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: #333; border-radius: 2px; }
-        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: var(--accent); margin-top: -7px; }
-        input[type="number"], select { background: #111; color: white; border: 1px solid var(--border); padding: 8px; border-radius: 4px; }
-        button { cursor: pointer; border-radius: 4px; border: 1px solid var(--border); padding: 10px; font-weight: bold; font-size: 12px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: var(--accent); margin-top: -6px; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+
+        input[type="number"], select { background: #111; color: white; border: 1px solid var(--border); padding: 8px; border-radius: 4px; font-size: 14px; }
+        button { cursor: pointer; border-radius: 4px; border: 1px solid var(--border); padding: 10px; font-weight: bold; font-size: 12px; transition: 0.2s; }
+        .btn-export { background: #333; color: var(--success); border-color: var(--success); margin-top: 5px; }
+
+        #goal-container { background: #111; padding: 12px; border-radius: 8px; border: 1px solid var(--border); }
+        #progress-bg { width: 100%; height: 8px; background: #222; border-radius: 4px; margin-top: 8px; overflow: hidden; }
+        #progress-fill { width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--success)); transition: width 0.8s; }
+
         #hud-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; pointer-events: none; }
-        .btn-large { padding: 18px 36px; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 50px; border: none; min-width: 220px; pointer-events: auto; }
-        #summary-screen { display: none; flex-direction: column; align-items: center; gap: 20px; background: rgba(15, 15, 15, 0.98); padding: 40px; border-radius: 20px; pointer-events: auto; }
+        .btn-large { padding: 18px 36px; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 50px; border: none; min-width: 220px; pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        #summary-screen { display: none; flex-direction: column; align-items: center; gap: 20px; background: rgba(15, 15, 15, 0.98); padding: 40px 30px; border-radius: 20px; border: 1px solid var(--border); pointer-events: auto; text-align: center; width: 280px; }
+        #startBtnCenter { background: var(--accent); color: white; }
+        #hudStop { background: var(--danger); color: white; }
+        #hudPause { background: var(--panel-bg); color: white; border: 1px solid #444; }
+        #history-list { font-size: 11px; color: #777; max-height: 180px; overflow-y: auto; margin-top: 10px; }
+        .log-entry { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1a1a1a; }
+        .cycle-label { color: var(--success); font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div id="controls">
-        <div style="margin-top: 60px;"></div>
+        <div style="margin-top: 50px;"></div>
         <div class="section">
             <div class="section-header">Appearance</div>
             <div class="control-group">
@@ -86,7 +99,16 @@
                 <select id="shapeSelect" onchange="saveSettings()">
                     <option value="bar">Bar</option>
                     <option value="ball">Ball</option>
-                    <option value="swarm">Swarm</option>
+                    <option value="swarm">Swarm of Balls</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="stars">Star Cluster</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Orientation</label>
+                <select id="modeSelect" onchange="saveSettings()">
+                    <option value="vertical">vertical</option>
+                    <option value="horizontal">horizontal</option>
                 </select>
             </div>
             <div class="control-group">
@@ -97,20 +119,64 @@
                 <label>Movement Speed <span id="speedVal" class="val-display">5.5</span></label>
                 <input type="range" id="speedSlider" min="1" max="10" step="0.1" value="5.5" oninput="updateRangeLabels()">
             </div>
+            <div style="display:flex; align-items:center; gap:12px; padding: 5px 0;"><input type="checkbox" id="smoothToggle" onchange="saveSettings()" style="width:18px; height:18px;"><label>Acceleration Mode</label></div>
         </div>
-        <button onclick="resetDefaults(event)">RESET SETTINGS</button>
+
+        <div class="section">
+            <div class="section-header">Session Timers</div>
+            <div class="control-group"><label>Daily Goal (Min)</label><input type="number" id="dailyGoalMin" value="30" onchange="saveSettings()"></div>
+            <div class="control-group"><label>Session Block Time (Min)</label><input type="number" id="workoutMin" value="10" onchange="updateCountdownOnly()"></div>
+            <div class="control-group">
+                <label>Random Bar Life (Sec)</label>
+                <div style="display:flex; gap:5px;"><input type="number" id="minSec" value="60" style="width:100%;" onchange="saveSettings()"><input type="number" id="maxSec" value="90" style="width:100%;" onchange="saveSettings()"></div>
+            </div>
+            <div class="control-group">
+                <label>Edge Pause (Sec) <span id="pauseVal" class="val-display">0.5</span></label>
+                <input type="range" id="edgePauseSlider" min="0" max="1" step="0.05" value="0.5" oninput="updateRangeLabels()">
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; padding: 5px 0;"><input type="checkbox" id="fullscreenToggle" onchange="saveSettings()" style="width:18px; height:18px;"><label>Auto Fullscreen on Start</label></div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">Alert Settings</div>
+            <div class="control-group"><label>Reaction Window (Sec)</label><input type="number" id="graceInput" value="5" onchange="saveSettings()"></div>
+            <div class="control-group">
+                <label>Flicker Frequency <span id="flickerVal" class="val-display">250</span></label>
+                <input type="range" id="flickerSpeed" min="100" max="400" step="5" value="250" style="direction: rtl;" oninput="updateRangeLabels()">
+            </div>
+            <div class="control-group">
+                <label>Alert Brightness <span id="brightVal" class="val-display">255</span></label>
+                <input type="range" id="flickerBright" min="0" max="255" value="255" oninput="updateRangeLabels()">
+            </div>
+            <button class="btn-large" style="font-size:10px; padding:10px; min-width:100%; border-radius:4px; background:#222; color:var(--accent);" id="testBtn" onclick="toggleFlicker(event)">FLICKER TEST</button>
+        </div>
+
+        <div class="section" style="border-bottom:none;">
+            <div class="section-header">Performance Log</div>
+            <div id="goal-container"><div id="goal-text" style="font-size:11px; font-weight:bold;">Progress: 0:00 / 30:00</div><div id="progress-bg"><div id="progress-fill"></div></div></div>
+            <button class="btn-export" onclick="exportLogToCSV()">DOWNLOAD EXCEL (.CSV)</button>
+            <div id="history-list"></div>
+            <button style="background:transparent; color:#666; font-size:10px; border:none; margin-top:10px;" onclick="clearLog()">CLEAR HISTORY</button>
+            <button style="background:transparent; color:#666; font-size:10px; border:none;" onclick="resetDefaults(event)">RESET ALL SETTINGS</button>
+        </div>
     </div>
 
-    <button id="toggleControls">MENU</button>
+    <button id="toggleControls" onclick="togglePanel(event)">MENU</button>
 
     <div id="hud-overlay">
-        <button id="startBtnCenter" class="btn-large" style="background:var(--accent); color:white;">START TRAINING</button>
-        <div id="active-session-hud" style="display:none; text-align:center;">
-             <div id="session-countdown" style="font-size:32px; font-weight:bold;">10:00</div>
-             <div style="display:flex; gap:10px; margin-top:20px;">
-                <button id="hudPause" class="btn-large" style="min-width:100px; background:#333;">PAUSE</button>
-                <button id="hudStop" class="btn-large" style="min-width:100px; background:var(--danger);">STOP</button>
-             </div>
+        <button id="startBtnCenter" class="btn-large" onclick="handleStartClick(event)">START TRAINING</button>
+        <div id="summary-screen">
+            <h2 style="margin:0; color:var(--accent); font-size:18px; letter-spacing:1px;">CURRENT SESSION</h2>
+            <div style="margin:20px 0;">
+                <p id="summary-time" style="font-size:32px; color:white; font-weight:bold; margin:5px 0;">0:00</p>
+            </div>
+            <button class="btn-large" style="background:var(--accent); margin-bottom:12px;" onclick="keepGoing(event)">KEEP GOING</button>
+            <button class="btn-large" style="background:var(--danger);" onclick="finalizeSession(event)">END SESSION</button>
+        </div>
+        <div id="active-session-hud" style="display:none; flex-direction:column; align-items:center; gap:15px;">
+            <div id="session-countdown" style="font-size:32px; font-weight:bold; letter-spacing:2px;"></div>
+            <div id="hud-total" style="color:var(--text-dim); font-size:12px; text-transform:uppercase;">Session Total: 0:00</div>
+            <div style="display:flex; gap:15px;"><button id="hudPause" class="btn-large" style="min-width:110px;" onclick="togglePause(event)">PAUSE</button><button id="hudStop" class="btn-large" style="min-width:110px;" onclick="stopSession(event)">STOP</button></div>
         </div>
     </div>
 
@@ -121,87 +187,174 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const controls = document.getElementById('controls');
-        const menuBtn = document.getElementById('toggleControls');
+        const activeHud = document.getElementById('active-session-hud');
+        const summaryScreen = document.getElementById('summary-screen');
         const startBtn = document.getElementById('startBtnCenter');
+        const menuBtn = document.getElementById('toggleControls');
+        const workoutDisplay = document.getElementById('session-countdown');
+        const totalDisplay = document.getElementById('hud-total');
         const interLayer = document.getElementById('interaction-layer');
+        const testBtn = document.getElementById('testBtn');
 
-        // NEW: Explicit Touch handling for Standalone App Mode
-        function handleGlobalClick(e) {
-            e.preventDefault(); // Prevents "ghost clicks" in app mode
-            
-            if (controls.classList.contains('visible')) {
-                controls.classList.remove('visible');
-                menuBtn.style.display = 'block';
-                return;
-            }
+        let bar = { pos: 0, dir: 1, active: false, internalPaused: false, userPaused: false };
+        let isWorkoutRunning = false, lastTimestamp = 0;
+        let countdownRemaining = 0, totalElapsedSessionTime = 0, cycleCount = 0;
+        let barRoundTimeRemaining = 0, isFlickering = false, alertTimer, hudTimer, starField = [];
+        let swarmOffs = [{x:0,y:0,t:0}, {x:0,y:0,t:Math.PI}, {x:0,y:0,t:Math.PI/2}]; 
 
-            if (!isWorkoutRunning) {
-                // If on start screen, clicking anywhere shows/hides the Start button
-                startBtn.style.display = (startBtn.style.display === 'none') ? 'block' : 'none';
-                menuBtn.style.display = (startBtn.style.display === 'block') ? 'block' : 'none';
-            } else {
-                // During workout, show HUD
-                showHUDTemporarily();
-            }
+        const controlIds = ['shapeSelect', 'modeSelect', 'smoothToggle', 'sizeSlider', 'speedSlider', 'edgePauseSlider', 'flickerSpeed', 'flickerBright', 'graceInput', 'workoutMin', 'dailyGoalMin', 'fullscreenToggle', 'minSec', 'maxSec'];
+
+        function updateRangeLabels() {
+            document.getElementById('sizeVal').innerText = document.getElementById('sizeSlider').value;
+            document.getElementById('speedVal').innerText = document.getElementById('speedSlider').value;
+            document.getElementById('pauseVal').innerText = document.getElementById('edgePauseSlider').value;
+            document.getElementById('flickerVal').innerText = document.getElementById('flickerSpeed').value;
+            document.getElementById('brightVal').innerText = document.getElementById('flickerBright').value;
+            saveSettings();
         }
 
-        // Apply events to both click and touch for universal compatibility
-        interLayer.addEventListener('touchstart', handleGlobalClick, {passive: false});
-        interLayer.addEventListener('mousedown', handleGlobalClick);
+        function saveSettings() {
+            const settings = {};
+            controlIds.forEach(id => { settings[id] = document.getElementById(id).type === 'checkbox' ? document.getElementById(id).checked : document.getElementById(id).value; });
+            localStorage.setItem('eye_trainer_pro_final_v1', JSON.stringify(settings));
+            updateGoalDisplay();
+        }
 
-        menuBtn.addEventListener('touchstart', (e) => { e.stopPropagation(); togglePanel(); }, {passive: false});
-        menuBtn.addEventListener('click', (e) => { e.stopPropagation(); togglePanel(); });
+        function loadSettings() {
+            const saved = localStorage.getItem('eye_trainer_pro_final_v1');
+            if (saved) {
+                const settings = JSON.parse(saved);
+                controlIds.forEach(id => { if (settings[id] !== undefined) { const el = document.getElementById(id); if (el.type === 'checkbox') el.checked = settings[id]; else el.value = settings[id]; } });
+            }
+            updateRangeLabels();
+            updateLogDisplay();
+        }
 
-        startBtn.addEventListener('touchstart', (e) => { e.stopPropagation(); startWorkout(); }, {passive: false});
-        startBtn.addEventListener('click', (e) => { e.stopPropagation(); startWorkout(); });
+        function togglePanel(e) { if(e) e.stopPropagation(); controls.classList.toggle('visible'); if (controls.classList.contains('visible')) { menuBtn.classList.remove('hidden'); activeHud.style.display = 'none'; clearTimeout(hudTimer); } }
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 
-        // Physics and Rendering logic remains same as previous builds...
-        let bar = { pos: 0, dir: 1, active: false };
-        let isWorkoutRunning = false;
-        let lastTimestamp = Date.now();
+        function updateCountdownOnly() { const min = parseInt(document.getElementById('workoutMin').value) || 1; countdownRemaining = min * 60 * 1000; saveSettings(); }
 
-        function togglePanel() {
-            controls.classList.toggle('visible');
-            menuBtn.style.display = controls.classList.contains('visible') ? 'block' : 'none';
+        function requestFullscreen() {
+            const docEl = window.document.documentElement;
+            const request = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
+            if (request) request.call(docEl);
         }
 
         function startWorkout() {
-            isWorkoutRunning = true;
-            bar.active = true;
-            startBtn.style.display = 'none';
-            menuBtn.style.display = 'none';
-            controls.classList.remove('visible');
+            if (document.getElementById('fullscreenToggle').checked) requestFullscreen();
+            if (!isWorkoutRunning) { isWorkoutRunning = true; totalElapsedSessionTime = 0; cycleCount = 0; updateCountdownOnly(); } else { cycleCount++; }
+            startNewBarRound();
         }
 
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+        function startNewBarRound() {
+            clearTimeout(alertTimer);
+            bar.active = true; bar.userPaused = false; isFlickering = false;
+            startBtn.style.display = 'none'; activeHud.style.display = 'none'; summaryScreen.style.display = 'none';
+            controls.classList.remove('visible'); menuBtn.classList.add('hidden');
+            const min = parseInt(document.getElementById('minSec')?.value || 60);
+            const max = parseInt(document.getElementById('maxSec')?.value || 90);
+            barRoundTimeRemaining = (Math.random() * (max - min) + min) * 1000;
+            lastTimestamp = Date.now();
         }
 
-        function update() {
-            let now = Date.now();
-            let delta = now - lastTimestamp;
-            lastTimestamp = now;
-
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            if (isWorkoutRunning && bar.active) {
-                const size = parseInt(document.getElementById('sizeSlider').value);
-                const speed = parseFloat(document.getElementById('speedSlider').value);
-                
-                bar.pos += speed * bar.dir;
-                if (bar.pos + size >= canvas.width || bar.pos <= 0) bar.dir *= -1;
-
-                ctx.fillStyle = '#fff';
-                ctx.fillRect(bar.pos, canvas.height/2 - size/2, size, size);
+        interLayer.addEventListener('click', () => {
+            if (controls.classList.contains('visible')) {
+                controls.classList.remove('visible');
+                if (isWorkoutRunning && (isFlickering || !bar.active)) startWorkout(); else if (isWorkoutRunning && bar.active) menuBtn.classList.add('hidden');
+                if (!isWorkoutRunning && isFlickering) { isFlickering = false; testBtn.innerText = "FLICKER TEST"; }
+                return;
             }
-            requestAnimationFrame(update);
+            if (isWorkoutRunning && summaryScreen.style.display !== 'flex') {
+                if (isFlickering || !bar.active) {
+                    startWorkout();
+                } else {
+                    const isVisible = (activeHud.style.display === 'flex');
+                    activeHud.style.display = isVisible ? 'none' : 'flex';
+                    if (isVisible) menuBtn.classList.add('hidden'); else menuBtn.classList.remove('hidden');
+                    
+                    clearTimeout(hudTimer);
+                    if (!isVisible) {
+                        hudTimer = setTimeout(() => {
+                            activeHud.style.display = 'none';
+                            menuBtn.classList.add('hidden');
+                        }, 4000);
+                    }
+                }
+            } else if (!isWorkoutRunning && !isFlickering) {
+                startBtn.style.display = 'block'; menuBtn.classList.remove('hidden');
+            } else if (!isWorkoutRunning && isFlickering) {
+                menuBtn.classList.remove('hidden');
+            }
+        });
+
+        function masterLoop() {
+            let now = Date.now(); let delta = now - lastTimestamp; lastTimestamp = now;
+            if (isFlickering) { const fSpeed = parseInt(document.getElementById('flickerSpeed').value); const bVal = Math.min(255, parseInt(document.getElementById('flickerBright').value)); ctx.fillStyle = (Math.floor(Date.now() / fSpeed) % 2 === 0) ? `rgb(${bVal},${bVal},${bVal})` : '#000'; } else ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            if (isWorkoutRunning && !bar.userPaused && summaryScreen.style.display !== 'flex') {
+                countdownRemaining -= delta;
+                totalElapsedSessionTime += delta;
+                workoutDisplay.innerText = formatTime(countdownRemaining);
+                totalDisplay.innerText = `Session Total: ${formatTime(totalElapsedSessionTime)}`;
+                if (countdownRemaining <= 0) showSummary();
+                else if (bar.active) {
+                    barRoundTimeRemaining -= delta;
+                    if (barRoundTimeRemaining <= 0) triggerGracePeriod();
+                    else updateBarPhysics();
+                }
+            }
+            if (isWorkoutRunning && bar.active) drawCurrentObjects();
+            requestAnimationFrame(masterLoop);
         }
+
+        function drawCurrentObjects() {
+            const size = parseInt(document.getElementById('sizeSlider').value);
+            const mode = document.getElementById('modeSelect').value;
+            const shape = document.getElementById('shapeSelect').value;
+            ctx.fillStyle = '#FFF';
+            const render = (offsetX, offsetY) => {
+                const drawX = (mode === 'vertical') ? (canvas.width / 2 + offsetX) : (bar.pos + offsetX);
+                const drawY = (mode === 'vertical') ? (bar.pos + offsetY) : (canvas.height / 2 + offsetY);
+                if (shape === 'bar') { if (mode === 'vertical') ctx.fillRect(0, bar.pos, canvas.width, size); else ctx.fillRect(bar.pos, 0, size, canvas.height); }
+                else if (shape === 'ball' || shape === 'swarm') { ctx.beginPath(); ctx.arc(drawX, drawY + size/2, size/2, 0, Math.PI * 2); ctx.fill(); }
+                else if (shape === 'triangle') { ctx.beginPath(); if (mode === 'vertical') { if (bar.dir === 1) { ctx.moveTo(drawX-size, bar.pos); ctx.lineTo(drawX+size, bar.pos); ctx.lineTo(drawX, bar.pos+size); } else { ctx.moveTo(drawX-size, bar.pos+size); ctx.lineTo(drawX+size, bar.pos+size); ctx.lineTo(drawX, bar.pos); } } else { if (bar.dir === 1) { ctx.moveTo(bar.pos, drawY-size); ctx.lineTo(bar.pos, drawY+size); ctx.lineTo(bar.pos+size, drawY); } else { ctx.moveTo(bar.pos+size, drawY-size); ctx.lineTo(bar.pos+size, drawY+size); ctx.lineTo(bar.pos, drawY); } } ctx.fill(); }
+                else if (shape === 'stars') { if (!starField.length) for(let i=0; i<8; i++) starField.push({ ox: Math.random() * 0.8 + 0.1, oy: Math.random() * 0.8 + 0.1 }); starField.forEach(s => { if (mode === 'vertical') ctx.fillRect(s.ox * canvas.width, bar.pos + (s.oy * size), 4, 4); else ctx.fillRect(bar.pos + (s.ox * size), s.oy * canvas.height, 4, 4); }); }
+            };
+            if (shape === 'swarm') { swarmOffs.forEach(o => { o.t += 0.05; o.x = Math.sin(o.t * 1.2) * (size * 0.4); o.y = Math.cos(o.t * 0.8) * (size * 0.4); render(o.x, o.y); }); }
+            else { render(0, 0); }
+        }
+
+        function updateBarPhysics() {
+            if (bar.internalPaused) return;
+            const size = parseInt(document.getElementById('sizeSlider').value);
+            const travel = ((document.getElementById('modeSelect').value === 'vertical') ? canvas.height : canvas.width) - size;
+            let curSpeed = parseFloat(document.getElementById('speedSlider').value);
+            if (document.getElementById('smoothToggle').checked) curSpeed = Math.max(curSpeed * Math.sin((bar.pos / travel) * Math.PI), 1.0);
+            bar.pos += curSpeed * bar.dir;
+            if (bar.pos >= travel || bar.pos <= 0) {
+                bar.pos = bar.pos <= 0 ? 0 : travel; bar.internalPaused = true;
+                setTimeout(() => { bar.dir *= -1; bar.internalPaused = false; }, parseFloat(document.getElementById('edgePauseSlider').value) * 1000);
+            }
+        }
+
+        function showSummary() { clearTimeout(alertTimer); bar.active = false; isFlickering = false; document.getElementById('summary-time').innerText = formatTime(totalElapsedSessionTime); summaryScreen.style.display = 'flex'; activeHud.style.display = 'none'; menuBtn.classList.remove('hidden'); }
+        function keepGoing(e) { if(e) e.stopPropagation(); updateCountdownOnly(); startNewBarRound(); }
+        function finalizeSession(e) { if(e) e.stopPropagation(); if (cycleCount > 0) logSession(totalElapsedSessionTime, cycleCount); isWorkoutRunning = false; summaryScreen.style.display = 'none'; startBtn.style.display = 'block'; menuBtn.classList.remove('hidden'); if (document.fullscreenElement) document.exitFullscreen(); }
+        function stopSession(e) { if(e) e.stopPropagation(); showSummary(); }
+        function logSession(ms, cycles) { let history = JSON.parse(localStorage.getItem('eye_trainer_pro_log_v2') || "[]"); history.unshift({ date: new Date().toLocaleDateString(), time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), ms: ms, cycles: cycles }); localStorage.setItem('eye_trainer_pro_log_v2', JSON.stringify(history.slice(0, 50))); updateLogDisplay(); }
+        function formatTime(ms) { let ts = Math.floor(Math.max(0, ms) / 1000); return `${Math.floor(ts / 60)}:${(ts % 60).toString().padStart(2,'0')}`; }
+        function updateLogDisplay() { const list = document.getElementById('history-list'); let history = JSON.parse(localStorage.getItem('eye_trainer_pro_log_v2') || "[]"); list.innerHTML = history.map(e => `<div class="log-entry"><span>${e.date} ${e.time}</span><span>${formatTime(e.ms)} <span class="cycle-label">[${e.cycles} Cycles]</span></span></div>`).join(''); updateGoalDisplay(); }
+        function updateGoalDisplay() { let history = JSON.parse(localStorage.getItem('eye_trainer_pro_log_v2') || "[]"); let todayMs = history.filter(e => e.date === new Date().toLocaleDateString()).reduce((s, e) => s + e.ms, 0); let goal = (parseInt(document.getElementById('dailyGoalMin').value) || 30) * 60000; document.getElementById('progress-fill').style.width = Math.min(100, (todayMs / goal) * 100) + "%"; document.getElementById('goal-text').innerText = `Progress: ${formatTime(todayMs)} / ${Math.floor(goal/60000)}:00`; }
+        function togglePause(e) { e.stopPropagation(); bar.userPaused = !bar.userPaused; document.getElementById('hudPause').innerText = bar.userPaused ? "RESUME" : "PAUSE"; if (!bar.userPaused) { lastTimestamp = Date.now(); activeHud.style.display = 'none'; menuBtn.classList.add('hidden'); } }
+        function toggleFlicker(e) { e.stopPropagation(); if (isWorkoutRunning) return; isFlickering = !isFlickering; testBtn.innerText = isFlickering ? "STOP" : "FLICKER TEST"; }
+        function resetDefaults(e) { if(confirm("Reset Settings?")) { localStorage.removeItem('eye_trainer_pro_final_v1'); location.reload(); } }
+        function clearLog() { if(confirm("Clear History?")) { localStorage.removeItem('eye_trainer_pro_log_v2'); updateLogDisplay(); } }
+        function triggerGracePeriod() { bar.active = false; menuBtn.classList.remove('hidden'); setTimeout(() => { if (!bar.active && isWorkoutRunning) isFlickering = true; }, 5000); }
+        function handleStartClick(e) { if(e) e.stopPropagation(); startWorkout(); }
 
         window.addEventListener('resize', resize);
-        resize();
-        update();
+        loadSettings(); resize(); requestAnimationFrame(masterLoop);
     </script>
 </body>
 </html>
